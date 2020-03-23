@@ -1,0 +1,51 @@
+version: "3"
+services:
+  pg:
+    image: postgres:9.6-alpine
+    environment:
+      - "POSTGRES_PASSWORD=$EGG_PASSWORD"
+      - "POSTGRES_USER=egg"
+      - "POSTGRES_DB=egg"
+    volumes:
+      - "/home/egg/database:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432"
+  pgadmin:
+    image: dpage/pgadmin4:4.16
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL=egg"
+      - "PGADMIN_DEFAULT_PASSWORD=$EGG_PASSWORD"
+      - "PGADMIN_LISTEN_PORT=80"
+    ports:
+      - "2345:80"
+    links:
+      - pg
+    depends_on:
+      - pg
+  nginx:
+    image: nginx:1.17.6
+    volumes:
+      - "$PWD/nginx:/etc/nginx"
+      - "/home/egg/log:/home/egg/log"
+    ports:
+      - "443:443"
+      - "80:80"
+    links:
+      - pgadmin
+      - egg
+    depends_on:
+      - pgadmin
+      - egg
+  egg:
+    build: .
+    environment:
+      - "GO111MODULE=on"
+      - "GOPROXY=https://goproxy.io"
+      - "GIN_MODE=release"
+      - "EGG_PASSWORD=$EGG_PASSWORD"
+      - "REPLY_TOKEN=$REPLY_TOKEN"
+      - "PORT=80"
+    volumes:
+      - "./:/usr/src/app"
+    depends_on:
+      - pg
